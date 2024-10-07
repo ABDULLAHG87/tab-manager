@@ -41,6 +41,46 @@ document.addEventListener('DOMContentLoaded', function() {
         tabItem.appendChild(tabActions);
         tabList.appendChild(tabItem);
       });
+
     });
   });
   
+  document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchTabs');
+    const tabsList = document.getElementById('tabsList');
+
+    // Get all open tabs
+    chrome.tabs.query({}, function(tabs) {
+        displayTabs(tabs);
+
+        // Filter tabs based on search input
+        searchInput.addEventListener('input', function() {
+            const searchText = searchInput.value.toLowerCase();
+            const filteredTabs = tabs.filter(tab => 
+                tab.title.toLowerCase().includes(searchText) || 
+                tab.url.toLowerCase().includes(searchText)
+            );
+            displayTabs(filteredTabs);
+        });
+    });
+
+    // Function to display tabs
+    function displayTabs(tabs) {
+        tabsList.innerHTML = '';
+        tabs.forEach(tab => {
+            const li = document.createElement('li');
+            li.className = 'tab-item';
+            li.innerHTML = `
+                <span>${tab.title}</span>
+                <button data-tab-id="${tab.id}">Close</button>
+            `;
+            li.querySelector('button').addEventListener('click', () => closeTab(tab.id));
+            tabsList.appendChild(li);
+        });
+    }
+
+    // Function to close tab
+    function closeTab(tabId) {
+        chrome.tabs.remove(tabId);
+    }
+});
