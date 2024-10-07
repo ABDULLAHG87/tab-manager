@@ -84,3 +84,18 @@ document.addEventListener('DOMContentLoaded', function() {
         chrome.tabs.remove(tabId);
     }
 });
+
+function closeDuplicateTabs() {
+    chrome.tabs.query({}, function(tabs) {
+        const seenUrls = new Set();
+        tabs.forEach(tab => {
+            if (seenUrls.has(tab.url)) {
+                chrome.tabs.remove(tab.id); // Close duplicate tab
+            } else {
+                seenUrls.add(tab.url); // Mark URL as seen
+            }
+        });
+    });
+}
+
+document.getElementById('closeDuplicates').addEventListener('click', closeDuplicateTabs);
