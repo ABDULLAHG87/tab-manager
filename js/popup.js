@@ -1,101 +1,64 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Query all open tabs
+    const searchInput = document.getElementById('searchTabs');
+    const tabsList = document.getElementById('tabsList');
+    const closeDuplicatesBtn = document.getElementById('closeDuplicates');
+  
+    // Load and display tabs
     chrome.tabs.query({}, function(tabs) {
-      let tabList = document.getElementById('tab-list');
-      
-      // Loop through each tab
-      tabs.forEach(function(tab) {
-        let tabItem = document.createElement('div');
-        tabItem.classList.add('tab-item');
-        
-        // Tab title
-        let tabTitle = document.createElement('div');
-        tabTitle.classList.add('tab-title');
-        tabTitle.textContent = tab.title.length > 25 ? tab.title.substring(0, 25) + "..." : tab.title; // Shorten long titles
-        
-        // Action buttons
-        let tabActions = document.createElement('div');
-        tabActions.classList.add('tab-actions');
-        
-        // Navigate Button
-        let navigateBtn = document.createElement('button');
-        navigateBtn.classList.add('navigate-btn');
-        navigateBtn.textContent = 'Go';
-        navigateBtn.addEventListener('click', function() {
-          chrome.tabs.update(tab.id, { active: true }); // Switch to the tab
-        });
-        
-        // Close Button
-        let closeBtn = document.createElement('button');
-        closeBtn.classList.add('close-btn');
-        closeBtn.textContent = 'Close';
-        closeBtn.addEventListener('click', function() {
-          chrome.tabs.remove(tab.id); // Close the tab
-          tabItem.remove(); // Remove the tab element from the DOM
-        });
-        
-        // Append buttons and tab title to the tab item
-        tabActions.appendChild(navigateBtn);
-        tabActions.appendChild(closeBtn);
-        tabItem.appendChild(tabTitle);
-        tabItem.appendChild(tabActions);
-        tabList.appendChild(tabItem);
+      displayTabs(tabs);
+  
+      // Filter tabs based on search input
+      searchInput.addEventListener('input', function() {
+        const searchText = searchInput.value.toLowerCase();
+        const filteredTabs = tabs.filter(tab => 
+          tab.title.toLowerCase().includes(searchText) || 
+          tab.url.toLowerCase().includes(searchText)
+        );
+        displayTabs(filteredTabs);
       });
-
+    });
+  
+    // Display tabs in the list
+    function displayTabs(tabs) {
+      tabsList.innerHTML = ''; // Clear previous list
+      tabs.forEach(tab => {
+        const li = document.createElement('li');
+        li.className = 'tab-item';
+        li.innerHTML = `
+          <span class="tab-title">${tab.title.length > 25 ? tab.title.substring(0, 25) + '...' : tab.title}</span>
+          <div class="tab-actions">
+            <button class="navigate-btn" data-tab-id="${tab.id}">Go</button>
+            <button class="close-btn" data-tab-id="${tab.id}">Close</button>
+          </div>
+        `;
+        
+        // Event listener for navigating to the tab
+        li.querySelector('.navigate-btn').addEventListener('click', () => {
+          chrome.tabs.update(tab.id, { active: true });
+        });
+  
+        // Event listener for closing the tab
+        li.querySelector('.close-btn').addEventListener('click', () => {
+          chrome.tabs.remove(tab.id);
+          li.remove(); // Remove tab from list
+        });
+  
+        tabsList.appendChild(li);
+      });
+    }
+  
+    // Close duplicate tabs
+    closeDuplicatesBtn.addEventListener('click', function() {
+      chrome.tabs.query({}, function(tabs) {
+        const seenUrls = new Set();
+        tabs.forEach(tab => {
+          if (seenUrls.has(tab.url)) {
+            chrome.tabs.remove(tab.id); // Close duplicate
+          } else {
+            seenUrls.add(tab.url); // Mark URL as seen
+          }
+        });
+      });
     });
   });
   
-  document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('searchTabs');
-    const tabsList = document.getElementById('tabsList');
-
-    // Get all open tabs
-    chrome.tabs.query({}, function(tabs) {
-        displayTabs(tabs);
-
-        // Filter tabs based on search input
-        searchInput.addEventListener('input', function() {
-            const searchText = searchInput.value.toLowerCase();
-            const filteredTabs = tabs.filter(tab => 
-                tab.title.toLowerCase().includes(searchText) || 
-                tab.url.toLowerCase().includes(searchText)
-            );
-            displayTabs(filteredTabs);
-        });
-    });
-
-    // Function to display tabs
-    function displayTabs(tabs) {
-        tabsList.innerHTML = '';
-        tabs.forEach(tab => {
-            const li = document.createElement('li');
-            li.className = 'tab-item';
-            li.innerHTML = `
-                <span>${tab.title}</span>
-                <button data-tab-id="${tab.id}">Close</button>
-            `;
-            li.querySelector('button').addEventListener('click', () => closeTab(tab.id));
-            tabsList.appendChild(li);
-        });
-    }
-
-    // Function to close tab
-    function closeTab(tabId) {
-        chrome.tabs.remove(tabId);
-    }
-});
-
-function closeDuplicateTabs() {
-    chrome.tabs.query({}, function(tabs) {
-        const seenUrls = new Set();
-        tabs.forEach(tab => {
-            if (seenUrls.has(tab.url)) {
-                chrome.tabs.remove(tab.id); // Close duplicate tab
-            } else {
-                seenUrls.add(tab.url); // Mark URL as seen
-            }
-        });
-    });
-}
-
-document.getElementById('closeDuplicates').addEventListener('click', closeDuplicateTabs);
