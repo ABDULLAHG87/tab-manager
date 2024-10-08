@@ -1,14 +1,25 @@
 {
-    "manifest_version": 3,
-    "name": "Tab Manager Extension",
-    "version": "1.0",
-    "description": "A smart tool to manage and organize browser tabs",
-    "permissions": ["tabs", "storage", "activeTab"],
-    "action": {
-      "default_popup": "popup/popup.html"
-    },
-    "background": {
-      "service_worker": "background/background.js"
+  "manifest_version": 3,
+  "name": "Tab Manager Extension",
+  "version": "1.0",
+  "description": "A smart tool to manage and organize browser tabs",
+  "permissions": [
+    "tabs", 
+    "storage", 
+    "activeTab", 
+    "background"],
+  "icons": {
+    "16": "./assets/icon16.png",
+    "48": "./assets/icon48.png"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "./assets/icon16.png",
+      "48": "./assets/icon48.png"
     }
+  },
+  "background": {
+    "service_worker": "background/background.js"
   }
-  
+}

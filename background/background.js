@@ -1,5 +1,13 @@
-chrome.runtime.onInstalled.addListener(function() {
+chrome.runtime.onInstalled.addListener(function () {
     console.log("Tab Manager Extension installed!");
+});
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.type === 'navigate-to-tab') {
+        chrome.tabs.update(request.tabId, { active: true }, (tab) => {
+            chrome.windows.update(tab.windowId, { focused: true });
+        });
+    }
 });
 
 const inactiveTimeLimit = 600000;  // 10 minutes (in milliseconds)
@@ -7,14 +15,13 @@ let lastActiveTabs = {};
 
 // Track the active tab for each window
 chrome.tabs.onActivated.addListener(activeInfo => {
-    const tabId = activeInfo.tabId;
     const windowId = activeInfo.windowId;
-    lastActiveTabs[windowId] = Date.now();  // Track last active time for the tab
+    lastActiveTabs[windowId] = Date.now();
 });
 
-// Function to suspend inactive tabs
+// Suspend inactive tabs automatically
 function autoSuspendTabs() {
-    chrome.windows.getAll({populate: true}, function(windows) {
+    chrome.windows.getAll({ populate: true }, function (windows) {
         windows.forEach(window => {
             window.tabs.forEach(tab => {
                 const now = Date.now();
