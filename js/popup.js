@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Get all open tabs and display them
     chrome.tabs.query({}, function (tabs) {
         allTabs = tabs; // Store all tabs in the global variable
-        displayGroupedTabs(groupByDomain(tabs));  // Group tabs by domain
+        displayGroupedTabs(groupByWindowAndDomain(tabs));  // Group tabs by window and domain
 
         // Start auto-suspension timer for inactive tabs
         startAutoSuspension();
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log('Search Input:', searchText);
 
             if (!searchText) {
-                displayGroupedTabs(groupByDomain(allTabs)); // Reset the display
+                displayGroupedTabs(groupByWindowAndDomain(allTabs)); // Reset the display
                 return;
             }
 
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 tab.url.toLowerCase().includes(searchText)
             );
 
-            displayGroupedTabs(groupByDomain(filteredTabs));
+            displayGroupedTabs(groupByWindowAndDomain(filteredTabs));
         });
     });
 
@@ -45,42 +45,77 @@ document.addEventListener('DOMContentLoaded', function () {
     // Function to restore session
     restoreSessionBtn.addEventListener('click', restoreSession);
 
+    // Function to group tabs by window and domain
+    function groupByWindowAndDomain(tabs) {
+        const groups = {};
+        tabs.forEach(tab => {
+            const windowId = tab.windowId;
+            const url = new URL(tab.url);
+            const domain = url.hostname;
+
+            // Initialize the window group if it doesn't exist
+            if (!groups[windowId]) {
+                groups[windowId] = {};
+            }
+
+            // Initialize the domain group within the window if it doesn't exist
+            if (!groups[windowId][domain]) {
+                groups[windowId][domain] = [];
+            }
+
+            // Add the tab to the domain group within the window
+            groups[windowId][domain].push(tab);
+        });
+
+        return groups;
+    }
+
     function displayGroupedTabs(groups) {
         domainTabsList.innerHTML = '';  // Clear previous list
-        Object.keys(groups).forEach(domain => {
-            const domainGroup = document.createElement('div');
-            domainGroup.innerHTML = `<strong>${domain}</strong>`;
-            domainGroup.classList.add('domain-group');
 
-            groups[domain].forEach(tab => {
-                const tabItem = document.createElement('li');
-                tabItem.className = 'tab-item';
-                tabItem.innerHTML = `
-                    <span class="tab-title">${tab.title.length > 25 ? tab.title.substring(0, 25) + '...' : tab.title}</span>
-                    <div class="tab-actions">
-                        <button class="navigate-btn">Go</button>
-                        <button class="close-btn">Close</button>
-                    </div>
-                `;
+        Object.keys(groups).forEach(windowId => {
+            const windowGroup = document.createElement('div');
+            windowGroup.innerHTML = `<h3>Window ID: ${windowId}</h3>`;
+            windowGroup.classList.add('window-group');
 
-                // Navigate button now focuses the tab and its window
-                tabItem.querySelector('.navigate-btn').addEventListener('click', () => {
-                    chrome.tabs.update(tab.id, { active: true }, () => {
-                        chrome.windows.update(tab.windowId, { focused: true });
+            // Now group by domain within this window
+            Object.keys(groups[windowId]).forEach(domain => {
+                const domainGroup = document.createElement('div');
+                domainGroup.innerHTML = `<strong>${domain}</strong>`;
+                domainGroup.classList.add('domain-group');
+
+                groups[windowId][domain].forEach(tab => {
+                    const tabItem = document.createElement('li');
+                    tabItem.className = 'tab-item';
+                    tabItem.innerHTML = `
+                        <span class="tab-title">${tab.title.length > 25 ? tab.title.substring(0, 25) + '...' : tab.title}</span>
+                        <div class="tab-actions">
+                            <button class="navigate-btn">Go</button>
+                            <button class="close-btn">Close</button>
+                        </div>
+                    `;
+
+                    // Navigate button now focuses the tab and its window
+                    tabItem.querySelector('.navigate-btn').addEventListener('click', () => {
+                        chrome.tabs.update(tab.id, { active: true }, () => {
+                            chrome.windows.update(tab.windowId, { focused: true });
+                        });
                     });
+
+                    // Close button to remove the tab
+                    tabItem.querySelector('.close-btn').addEventListener('click', () => {
+                        chrome.tabs.remove(tab.id, () => {
+                            tabItem.remove();  // Remove the tab from the list after closing it
+                        });
+                    });
+
+                    domainGroup.appendChild(tabItem);
                 });
 
-                // Close button to remove the tab
-                tabItem.querySelector('.close-btn').addEventListener('click', () => {
-                    chrome.tabs.remove(tab.id, () => {
-                        tabItem.remove();  // Remove the tab from the list after closing it
-                    });
-                });
-
-                domainGroup.appendChild(tabItem);
+                windowGroup.appendChild(domainGroup);
             });
 
-            domainTabsList.appendChild(domainGroup);
+            domainTabsList.appendChild(windowGroup);
         });
     }
 
@@ -96,21 +131,8 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             // Refresh the tabs after closing duplicates
             allTabs = tabs.filter(tab => !seenUrls.has(tab.url)); // Update allTabs with remaining tabs
-            displayGroupedTabs(groupByDomain(allTabs));
+            displayGroupedTabs(groupByWindowAndDomain(allTabs));
         });
-    }
-
-    function groupByDomain(tabs) {
-        const groups = {};
-        tabs.forEach(tab => {
-            const url = new URL(tab.url);
-            const domain = url.hostname;
-            if (!groups[domain]) {
-                groups[domain] = [];
-            }
-            groups[domain].push(tab);
-        });
-        return groups;
     }
 
     // Auto-suspend inactive tabs
@@ -146,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function suspendTab(tab) {
         chrome.tabs.discard(tab.id, () => {
             suspendedTabs.push(tab);
-            displayGroupedTabs(groupByDomain(allTabs.filter(t => t.id !== tab.id))); // Remove the suspended tab from display
+            displayGroupedTabs(groupByWindowAndDomain(allTabs.filter(t => t.id !== tab.id))); // Remove the suspended tab from display
         });
     }
 
