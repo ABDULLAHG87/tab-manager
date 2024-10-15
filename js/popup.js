@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let allTabs = []; // Store all tabs globally
     let suspendedTabs = []; // Store suspended tabs
-    let autoSuspendTimeout = 60000 * 5; // 5 minutes timeout for auto-suspension
+    let autoSuspendTimeout = 60000 * 2; // 2 minutes timeout for auto-suspension
 
     // Get all open tabs and display them
     chrome.tabs.query({}, function (tabs) {
@@ -70,6 +70,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return groups;
     }
 
+    // Display the grouped tabs in the UI
     function displayGroupedTabs(groups) {
         domainTabsList.innerHTML = '';  // Clear previous list
 
@@ -119,6 +120,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Function to close duplicate tabs
     function closeDuplicateTabs() {
         chrome.tabs.query({}, function (tabs) {
             const seenUrls = new Set();
@@ -135,13 +137,13 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Auto-suspend inactive tabs
+    // Auto-suspend inactive tabs using setInterval for periodic checks
     function startAutoSuspension() {
-        setTimeout(() => {
+        setInterval(() => {
             chrome.tabs.query({}, function (tabs) {
                 const now = Date.now();
                 tabs.forEach(tab => {
-                    if (now - tab.lastAccessed > autoSuspendTimeout) {
+                    if (!tab.active && now - tab.lastAccessed > autoSuspendTimeout) {
                         suspendTab(tab);
                     }
                 });
@@ -154,11 +156,13 @@ document.addEventListener('DOMContentLoaded', function () {
         chrome.processes.getProcessInfo([], true, function (processes) {
             processes.forEach(process => {
                 if (process.privateMemory > 200 * 1024 * 1024) {  // Memory threshold: 200MB
-                    process.tabs.forEach(tabId => {
-                        chrome.tabs.get(tabId, function (tab) {
-                            suspendTab(tab);
+                    if (process.tabs) {
+                        process.tabs.forEach(tabId => {
+                            chrome.tabs.get(tabId, function (tab) {
+                                suspendTab(tab);
+                            });
                         });
-                    });
+                    }
                 }
             });
         });
@@ -166,10 +170,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Suspend a single tab
     function suspendTab(tab) {
-        chrome.tabs.discard(tab.id, () => {
-            suspendedTabs.push(tab);
-            displayGroupedTabs(groupByWindowAndDomain(allTabs.filter(t => t.id !== tab.id))); // Remove the suspended tab from display
-        });
+        if (!tab.active) {  // Ensure the tab is not active
+            chrome.tabs.discard(tab.id, function () {
+                if (chrome.runtime.lastError) {
+                    console.log(`Failed to discard tab ${tab.id}: ${chrome.runtime.lastError.message}`);
+                } else {
+                    console.log(`Tab ${tab.id} suspended`);
+                    suspendedTabs.push(tab);
+                    // Remove the suspended tab from the display
+                    displayGroupedTabs(groupByWindowAndDomain(allTabs.filter(t => t.id !== tab.id)));
+                }
+            });
+        } else {
+            console.log(`Cannot suspend active tab ${tab.id}`);
+        }
     }
 
     // Restore suspended tabs

@@ -6,7 +6,8 @@
   "permissions": [
     "tabs", 
     "storage", 
-    "activeTab", 
+    "activeTab",
+    "tabCapture", 
     "background"],
   "icons": {
     "16": "./assets/icon16.png",
