@@ -8,14 +8,23 @@
 </head>
 <body>
   <h1>Manage Your Tabs</h1>
+  
+  <!-- Search Bar to Search Tabs -->
   <input class="search-bar" type="text" id="searchTabs" placeholder="Search tabs..." />
+
+  <!-- Tab Groups Section -->
   <div class="tab-groups">
-      <h2>Grouped by Domain</h2>
+      <h2>Grouped by Window and Domain</h2>
+      <!-- List of Windows with Tabs -->
       <ul id="domainTabsList" class="tab-list"></ul>
   </div>
+
+  <!-- Action Button to Close Duplicate Tabs -->
   <div class="actions">
     <button id="closeDuplicates" class="close-duplicates">Close Duplicate Tabs</button>
   </div>
+
+  <!-- Link to External JavaScript -->
   <script src="../js/popup.js"></script>
 </body>
 </html>
