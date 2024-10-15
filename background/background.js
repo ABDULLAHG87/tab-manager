@@ -41,7 +41,7 @@ function autoSuspendTabs() {
 function suspendTab(tab) {
     chrome.tabs.discard(tab.id, () => {
         console.log(`Tab ${tab.id} suspended!`);
-        
+
         // Save suspended tab information for session restore
         suspendedTabs.push({
             id: tab.id,
@@ -56,26 +56,6 @@ function suspendTab(tab) {
 
 // Check every minute to suspend inactive tabs
 setInterval(autoSuspendTabs, 60000);
-
-// Function to detect and suspend heavy tabs
-function checkAndSuspendHeavyTabs() {
-    chrome.processes.getProcessInfo([], true, (processes) => {
-        processes.forEach(process => {
-            if (process.privateMemory > 200 * 1024 * 1024) { // Threshold: 200 MB
-                const tabId = process.tabs ? process.tabs[0] : null;
-                if (tabId) {
-                    chrome.tabs.get(tabId, (tab) => {
-                        console.log(`Heavy tab detected: ${tab.title} using ${process.privateMemory / 1024 / 1024} MB`);
-                        suspendTab(tab);
-                    });
-                }
-            }
-        });
-    });
-}
-
-// Check every 5 minutes for heavy tabs
-setInterval(checkAndSuspendHeavyTabs, 300000); // Every 5 minutes
 
 // Session Restore
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
